@@ -1,0 +1,19 @@
+
+
+
+
+Infos à donner à l'intelligence artificielle pour tenir droite et se déplacer : 
+ - Proprioception
+ - Equilibrioception
+ - Vue
+
+
+
+
+
+
+
+
+
+
+
