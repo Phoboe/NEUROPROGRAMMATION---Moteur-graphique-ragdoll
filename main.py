@@ -8,6 +8,7 @@ import os
 from Neuron import Perceptron, Neuron
 neuron = Neuron()
 from Perso import *
+import constructor as constr
 
 
 
@@ -23,31 +24,41 @@ clock = pygame.time.Clock()
 window.fill((0,0,0))
 
 continuer = True
-grav = 0.060
+grav = 1 / 60 * 9.81
 pressed = False
 
 
 
 class Bat():
     def __init__(self):
-        self.A = (width/2, height/2)
-        self.B = (self.A[0] + 100, self.A[1] + 100)
-        self.lenght = sqrt((self.A[0]-self.B[0])**2+(self.A[1]-self.B[1])**2)
-        self.speedA = (random()*10-5, -random()*10)
-        self.speedB = (random()*10-5, -random()*10)
+        self.pos = (width/2, height/2)
+        self.lenght = 50
+        self.alpha = 0
+        self.speed = (random()*10-5, -random()*7)
+        self.speedAlpha = 0.1
         return None
 
-    def constrain(self):
-        dx = self.A[0] - self.B[0]
-        dy = self.A[1] - self.B[1]
-        lenght = sqrt((dx*dx) + (dy*dy))
-        percent = ((lenght - self.lenght)/lenght)/2
-        offx = dx * percent
-        offy = dy * percent
+    def collide(self, side):
+        if side == 'down':
+            if self.speedAlpha > 0:
+                x = (   self.speed[0] * 0.8 / 60) + (cos(bat.alpha + (pi/2)) * (bat.lenght/2) * bat.speedAlpha)
+                y = ( - self.speed[1] * 0.8 / 60) + (sin(bat.alpha + (pi/2)) * (bat.lenght/2) * bat.speedAlpha)
+            else:
+                x = (   self.speed[0] * 0.8 / 60) + (cos(bat.alpha - (pi/2)) * (bat.lenght/2) * bat.speedAlpha)
+                y = ( - self.speed[1] * 0.8 / 60) + (sin(bat.alpha - (pi/2)) * (bat.lenght/2) * bat.speedAlpha)
+                pass
+            vector = constr.Vector(x, y)
+            angle = vector.angle()
+            longi = vector.norm() * cos(angle - self.alpha) #composante longitudinale
+            tang  = vector.norm() - longi      #composante tangentielle
+            self.speed = (vector.x * (longi/tang) / 60, vector.y * (longi/tang) / 60)
+            if angle - self.alpha > pi:
+                self.speedAlpha += tang/longi * vector.norm() * (self.lenght/2) / 60
+            else:
+                self.speedAlpha -= tang/longi * vector.norm() * (self.lenght/2) / 60
+            pass
+        pass
 
-        self.A = add(self.A, (-offx,-offy))
-        self.B = add(self.B, ( offx, offy))
-    pass
 bat = Bat()
 
 
@@ -61,37 +72,28 @@ def integ(prime):
     return (int(prime[0]), int(prime[1]))
 
 
+
+
+
 while continuer == True:
 
     window.fill((0,0,0))
 
-    #bat.speedA = (bat.speedA[0], bat.speedA[1] + grav) #la ligne du dessous le fait tout aussi bien
-    bat.speedA = add(bat.speedA, (0, grav)) # on fait marcher la gravité
-    bat.speedB = add(bat.speedB, (0, grav))
-    #bat.A = (bat.A[0] + bat.speedA[1], bat.A[1] + bat.speedA[1]) # la ligne du dessous le fait tout aussi bien (pareil pour B)
-    bat.A = add(bat.A, bat.speedA)
-    bat.B = add(bat.B, bat.speedB)
+    bat.speed = add(bat.speed, (0, grav)) # on fait marcher la gravité
+    bat.alpha += bat.speedAlpha
+    bat.alpha = bat.alpha % (2*pi)
+    bat.pos = add(bat.pos, bat.speed)
 
     ### Gestion de la collision
-    if bat.A[1] > height-10:
-        bat.A = (bat.A[0], height - 10.1)
-        bat.speedA = (0.2 * bat.speedA[0], -0.5 * bat.speedA[1])
-    if bat.B[1] > height-10:
-        bat.B = (bat.B[0], height - 10.1)
-        bat.speedB = (0.2 * bat.speedB[0], -0.5 * bat.speedB[1])
-
-    if bat.A[0] > width:
-        bat.A = (width - 0.05, bat.A[1])
-        bat.speedA = (-0.6 * bat.speedA[0], bat.speedA[1])
-    if bat.B[0] > width:
-        bat.B = (width - 0.05, bat.B[1])
-        bat.speedB = (-0.6 * bat.speedB[0], bat.speedB[1])
-    if bat.A[0] < 0:
-        bat.A = (0.05, bat.A[1])
-        bat.speedA = (-0.6 * bat.speedA[0], bat.speedA[1])
-    if bat.B[0] < 0:
-        bat.B = (0.05, bat.B[1])
-        bat.speedB = (-0.6 * bat.speedB[0], bat.speedB[1])
+    A = (bat.pos[0] + (cos(bat.alpha   )*bat.lenght/2), bat.pos[1] + (sin(bat.alpha   )*bat.lenght/2))
+    B = (bat.pos[0] + (cos(bat.alpha+pi)*bat.lenght/2), bat.pos[1] + (sin(bat.alpha+pi)*bat.lenght/2))
+    if A[1] > height-35:
+        bat.pos = (bat.pos[0], (height-35.01) - (sin(bat.alpha   )*(bat.lenght/2)))
+        bat.collide('down')
+    if B[1] > height-35:
+        bat.pos = (bat.pos[0], (height-35.01) - (sin(bat.alpha+pi)*(bat.lenght/2)))
+        bat.collide('down')
+        pass
     ### Fin Gestion collision
 
 
@@ -99,16 +101,21 @@ while continuer == True:
 
 
     ### Contraintes
-    bat.constrain()
+     # bat.constrain()
     ### Fin Contraintes
 
 
 
+    if bat.speed[0] > 15 or bat.speed[1] > 15:
+        print('--------------------')
+        print('speed   :', bat.speed)
+        print('angular : ', bat.speedAlpha)
 
     window.fill((0,0,0))
-    pygame.draw.line(window, (255, 150, 150), integ(bat.A), integ(bat.B), 2)
-    pygame.draw.circle(window, (255, 0, 0), integ(bat.A), 3)
-    pygame.draw.circle(window, (255, 0, 0), integ(bat.B), 3)
+    pygame.draw.line(window, (255, 255, 255), (0,height-30), (width, height-30))
+    pygame.draw.line(window, (255, 150, 150), integ(A), integ(B), 2)
+    pygame.draw.circle(window, (255, 0, 0), integ(A), 3, 1)
+    pygame.draw.circle(window, (255, 0, 0), integ(B), 3, 1)
     pygame.display.flip()
     clock.tick(60)
 
